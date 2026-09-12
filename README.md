@@ -1,48 +1,44 @@
 # ESP32 RF Lab
 
-ESP32 RF Lab is a portable Wi-Fi and RF experimentation and benchmarking toolkit for the ESP32 family. It is designed to evaluate antenna performance, signal strength, and connection quality without relying on external UI components like OLEDs or buttons.
+ESP32 RF Lab is a portable Wi-Fi and RF experimentation and benchmarking toolkit for the ESP32 family. It is designed to evaluate antenna performance, signal strength, and connection quality.
+
+**Core Philosophy: Measure on ESP32. Analyze on PC.**
+The ESP32 firmware handles the raw RF data collection, while the robust desktop GUI application (PySide6 + PyQtGraph) handles complex calculations, moving averages, databases, and charting.
 
 ## Features
 
 - **Wi-Fi Network Discovery**: Scan for networks and display signal strength, channel, and BSSID.
-- **Hardware Agnostic**: Supports ESP32, ESP32-S2, ESP32-S3, ESP32-C3, and ESP32-C6.
-- **Signal-Strength Analysis**: Real-time RSSI measurement and statistical calculations (min, max, avg, variance).
+- **Hardware Agnostic**: Firmware supports ESP32, ESP32-S2, ESP32-S3, ESP32-C3.
 - **Antenna A/B Benchmarking**: Structured workflow to compare two antennas by holding conditions identical and generating statistical reports.
-- **Data Logging**: Output logs in CSV, JSON, or human-readable formats via the Serial port.
 - **Serial CLI**: Interact with the toolkit using clean, simple text commands over a serial monitor.
-
-## Architecture
-
-ESP32 RF Lab is designed using a modular C++ architecture to maintain separation of concerns:
-- **Hardware Abstraction**: Determines chip model and capabilities.
-- **Wi-Fi Engine**: Handles network connections and scanning.
-- **Measurement Engine**: Collects samples and computes statistical metrics.
-- **Antenna Benchmark Engine**: Orchestrates A/B test sequences.
-- **Logging Engine**: Handles formatted data output.
-- **Serial CLI**: Processes user commands interactively.
+- **High-End Desktop GUI**: A robust PySide6 application with real-time `pyqtgraph` charts, structured JSON/Checksummed telemetry, SQLite session storage, and CSV/JSON exporting.
 
 ## Setup & Installation
 
-### Requirements
-- VSCode with PlatformIO extension or PlatformIO Core CLI.
-- A supported ESP32 development board.
+### 1. ESP32 Firmware
+1. Open the repository root in PlatformIO (VSCode).
+2. Build for your specific target (e.g., `pio run -e esp32dev`).
+3. Flash the board (`pio run -e esp32dev -t upload`).
 
-### Building and Flashing
-1. Clone this repository.
-2. Open the project in PlatformIO.
-3. Build for your specific target. For example, using the CLI:
+### 2. Desktop GUI
+The GUI requires Python 3.10+.
+1. Navigate to the GUI folder:
    ```bash
-   pio run -e esp32dev
+   cd desktop_gui
    ```
-   (Replace `esp32dev` with your target environment defined in `platformio.ini`, e.g., `esp32s3`, `esp32c3`).
-4. Flash the board:
+2. Install the requirements:
    ```bash
-   pio run -e esp32dev -t upload
+   pip install -r requirements.txt
    ```
+3. Run the application:
+   ```bash
+   python main.py
+   ```
+   *(Note: You can select "SIMULATOR" from the ports dropdown to test the GUI without an ESP32 connected!)*
 
-## CLI Usage
+## CLI Usage (Firmware)
 
-Connect to the ESP32 over Serial using a baud rate of `115200`. Use the following commands to control the tool:
+Connect to the ESP32 over Serial using a baud rate of `115200`. Use the following commands to control the tool manually:
 
 | Command | Description |
 |---|---|
@@ -58,6 +54,8 @@ Connect to the ESP32 over Serial using a baud rate of `115200`. Use the followin
 | `COMPARE` | Compare the results of the Antenna A and Antenna B benchmarks. |
 | `LOG START` | Begin logging RSSI data every second in CSV format. |
 | `LOG STOP` | Stop the background logger. |
+| `STREAM START [rate]` | Starts the structured framed telemetry protocol for the GUI (rate in Hz: 1, 2, 5, 10). |
+| `STREAM STOP` | Stops the structured GUI telemetry. |
 
 ## Antenna Testing Methodology
 
@@ -66,6 +64,6 @@ When performing an A/B test between two antennas:
 2. Connect to a stable Wi-Fi network using the `CONNECT` command.
 3. Attach the first antenna. Run `ANTENNA A`. Wait for the test to complete.
 4. Carefully power down (if necessary), attach the second antenna, power up, connect, and ensure it is placed exactly as before. Run `ANTENNA B`.
-5. Run `COMPARE` to view the statistical differences in signal quality.
+5. Run `COMPARE` to view the statistical differences in signal quality, or stream the data directly to the **Desktop GUI** for persistent storage and graphing.
 
 **Note**: Do not rely on instantaneous RSSI for conclusions. Evaluate the average, minimum, and variance over the measurement duration.
