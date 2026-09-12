@@ -1,7 +1,7 @@
 #include "SerialCLI.h"
 
 SerialCLI::SerialCLI(HardwareAbstraction* h, WiFiEngine* w, MeasurementEngine* m, LoggingEngine* l, AntennaBenchmarkEngine* b)
-    : hw(h), wifi(w), meas(m), log(l), bench(b) {
+    : hw(h), wifi(w), meas(m), log(l), bench(b), telemetryRateHz(1) {
 }
 
 void SerialCLI::update() {
@@ -18,6 +18,10 @@ void SerialCLI::update() {
     }
 }
 
+uint32_t SerialCLI::getTelemetryRate() const {
+    return telemetryRateHz;
+}
+
 void SerialCLI::processCommand(const String& cmdRaw) {
     String cmd = cmdRaw;
     cmd.trim();
@@ -32,7 +36,23 @@ void SerialCLI::processCommand(const String& cmdRaw) {
     }
     else if (cmdUpper == "SCAN") {
         auto nets = wifi->scanNetworks();
-        wifi->printScanResults(nets);
+        // Print as structured JSON if GUI stream is active, otherwise human
+        if (log->isActive() && log->getFormat() == LogFormat::TELEMETRY) {
+            Serial.println("SCAN_START");
+            for (const auto& net : nets) {
+                // Calculate checksum for scan items too
+                char buffer[256];
+                snprintf(buffer, sizeof(buffer), "SCAN_RES,%s,%s,%d,%d,%d",
+                    net.ssid.c_str(), net.bssid.c_str(), net.rssi, net.channel, net.encryptionType);
+                String dataStr(buffer);
+                uint8_t checksum = 0;
+                for (size_t i = 0; i < dataStr.length(); ++i) checksum ^= dataStr[i];
+                Serial.printf("%s,%02X\n", buffer, checksum);
+            }
+            Serial.println("SCAN_END");
+        } else {
+            wifi->printScanResults(nets);
+        }
     }
     else if (cmdUpper.startsWith("CONNECT ")) {
         handleConnect(cmd);
@@ -73,6 +93,13 @@ void SerialCLI::processCommand(const String& cmdRaw) {
     else if (cmdUpper == "COMPARE") {
         bench->compare();
     }
+    else if (cmdUpper.startsWith("STREAM START")) {
+        handleStream(cmdUpper);
+    }
+    else if (cmdUpper == "STREAM STOP") {
+        log->stopLog();
+        Serial.println("ACK_STREAM_STOP");
+    }
     else if (cmdUpper == "LOG START") {
         log->startLog(LogFormat::CSV);
         Serial.println("Started CSV logging.");
@@ -90,7 +117,6 @@ void SerialCLI::processCommand(const String& cmdRaw) {
 }
 
 void SerialCLI::handleConnect(const String& cmd) {
-    // Expected format: CONNECT SSID PASSWORD
     int firstSpace = cmd.indexOf(' ');
     if (firstSpace == -1) return;
 
@@ -100,7 +126,6 @@ void SerialCLI::handleConnect(const String& cmd) {
     String pass = "";
 
     if (secondSpace == -1) {
-        // No password
         ssid = cmd.substring(firstSpace + 1);
     } else {
         ssid = cmd.substring(firstSpace + 1, secondSpace);
@@ -111,6 +136,26 @@ void SerialCLI::handleConnect(const String& cmd) {
     pass.trim();
 
     wifi->connect(ssid.c_str(), pass.c_str());
+    if (log->isActive() && log->getFormat() == LogFormat::TELEMETRY) {
+        Serial.println("ACK_CONNECT");
+    }
+}
+
+void SerialCLI::handleStream(const String& cmdUpper) {
+    // STREAM START [RATE]
+    int rate = 1; // default 1Hz
+    int lastSpace = cmdUpper.lastIndexOf(' ');
+
+    if (lastSpace > 0 && lastSpace != cmdUpper.indexOf(' ')) {
+        String rateStr = cmdUpper.substring(lastSpace + 1);
+        rate = rateStr.toInt();
+        if (rate <= 0) rate = 1;
+        if (rate > 20) rate = 20; // Cap at 20Hz
+    }
+
+    telemetryRateHz = rate;
+    log->startLog(LogFormat::TELEMETRY);
+    Serial.printf("ACK_STREAM_START,%d\n", telemetryRateHz);
 }
 
 void SerialCLI::printHelp() const {
@@ -125,6 +170,8 @@ void SerialCLI::printHelp() const {
     Serial.println("ANTENNA A   - Run 10s benchmark for Antenna A");
     Serial.println("ANTENNA B   - Run 10s benchmark for Antenna B");
     Serial.println("COMPARE     - Compare A/B benchmark results");
+    Serial.println("STREAM START [rate] - Start GUI telemetry (1, 2, 5, 10 Hz)");
+    Serial.println("STREAM STOP - Stop GUI telemetry");
     Serial.println("LOG START   - Start CSV logging");
     Serial.println("LOG STOP    - Stop CSV logging");
     Serial.println("========================");

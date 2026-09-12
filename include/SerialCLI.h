@@ -16,13 +16,19 @@ private:
 
     String commandBuffer;
 
+    // Telemetry rate in Hz (0 means off, handled by main loop)
+    uint32_t telemetryRateHz;
+
     void processCommand(const String& cmd);
     void printHelp() const;
     void handleConnect(const String& cmd);
+    void handleStream(const String& cmd);
 
 public:
     SerialCLI(HardwareAbstraction* h, WiFiEngine* w, MeasurementEngine* m, LoggingEngine* l, AntennaBenchmarkEngine* b);
 
     // Poll for serial input
     void update();
+
+    uint32_t getTelemetryRate() const;
 };

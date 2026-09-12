@@ -34,7 +34,16 @@ void loop() {
 
     // Background logging if active
     if (logEngine.isActive() && wifiEngine.isConnected()) {
-        if (millis() - lastLogTime >= 1000) { // Log every second
+        uint32_t intervalMs = 1000; // default 1Hz
+
+        if (logEngine.getFormat() == LogFormat::TELEMETRY) {
+            uint32_t rate = myCli.getTelemetryRate();
+            if (rate > 0) {
+                intervalMs = 1000 / rate;
+            }
+        }
+
+        if (millis() - lastLogTime >= intervalMs) {
             lastLogTime = millis();
             int32_t rssi = wifiEngine.getCurrentRSSI();
             // In a fuller implementation, latency, loss, and throughput would be measured here.
