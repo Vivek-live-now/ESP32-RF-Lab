@@ -3,6 +3,7 @@
 #endif
 #include <unity.h>
 #include "MeasurementEngine.h"
+#include "../src/MeasurementEngine.cpp"
 
 // Mock for testing
 class MockWiFiEngine : public WiFiEngine {

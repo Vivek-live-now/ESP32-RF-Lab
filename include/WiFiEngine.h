@@ -70,3 +70,18 @@ public:
     virtual void printScanResults(const std::vector<WiFiNetwork>& networks) const;
 };
 
+#if !defined(ARDUINO)
+inline WiFiEngine::WiFiEngine() {}
+inline void WiFiEngine::begin() {}
+inline bool WiFiEngine::connect(const char*, const char*, uint32_t) { return false; }
+inline void WiFiEngine::disconnect() {}
+inline bool WiFiEngine::isConnected() const { return false; }
+inline int32_t WiFiEngine::getCurrentRSSI() const { return 0; }
+inline int32_t WiFiEngine::getCurrentChannel() const { return 0; }
+inline IPAddress WiFiEngine::getGatewayIP() const { return IPAddress(); }
+inline IPAddress WiFiEngine::getLocalIP() const { return IPAddress(); }
+inline std::vector<WiFiNetwork> WiFiEngine::scanNetworks() { return {}; }
+inline void WiFiEngine::printScanResults(const std::vector<WiFiNetwork>&) const {}
+#endif
+
+
