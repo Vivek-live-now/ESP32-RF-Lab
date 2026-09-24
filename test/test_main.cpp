@@ -1,4 +1,6 @@
+#if defined(ARDUINO)
 #include <Arduino.h>
+#endif
 #include <unity.h>
 #include "MeasurementEngine.h"
 
