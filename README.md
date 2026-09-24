@@ -1,78 +1,205 @@
 # ESP32 RF Lab
 
-ESP32 RF Lab is a portable Wi-Fi and RF experimentation and benchmarking toolkit for the ESP32 family. It is designed to evaluate antenna performance, signal strength, and connection quality.
+[![CI](https://github.com/Vivek-live-now/ESP32-RF-Lab/actions/workflows/ci.yml/badge.svg)](https://github.com/Vivek-live-now/ESP32-RF-Lab/actions/workflows/ci.yml)
+![PlatformIO](https://img.shields.io/badge/PlatformIO-ESP32-orange.svg)
+![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg)
+![License](https://img.shields.io/badge/License-MIT-green.svg)
 
-**Core Philosophy: Measure on ESP32. Analyze on PC.**
-The ESP32 firmware handles the raw RF data collection, while the robust desktop GUI application (PySide6 + PyQtGraph) handles complex calculations, moving averages, databases, and charting.
+**ESP32 RF Lab** is an open-source Wi-Fi and RF experimentation, telemetry, and antenna benchmarking toolkit for the ESP32 microcontroller family (ESP32, S2, S3, C3). It evaluates antenna reception performance, RF link stability, and network quality using genuine physical measurements.
+
+> **Core Philosophy: Measure on ESP32. Analyze on PC.**  
+> The ESP32 firmware handles real-time physical RF data acquisition, ICMP ping probes, and chip thermal sensing, while the desktop GUI application (PySide6 + PyQtGraph) handles real-time charting, A/B antenna matrix differentials, SQLite persistence, and CSV exports.
+
+---
+
+## Architecture Overview
+
+```mermaid
+flowchart LR
+    subgraph ESP32["ESP32 Microcontroller"]
+        direction TB
+        PHY["2.4 GHz Wi-Fi PHY<br/>(RSSI & Channels)"] --> MeasEngine["MeasurementEngine<br/>(Min/Max/Avg/StdDev)"]
+        lwIP["lwIP Network Stack<br/>(esp_ping ICMP)"] --> PingEngine["PingEngine<br/>(Latency & Loss)"]
+        Thermal["Internal Silicon Diode<br/>(Thermal Sensor)"] --> HW["HardwareAbstraction"]
+        
+        MeasEngine --> LogEngine["LoggingEngine<br/>(Framed Telemetry)"]
+        PingEngine --> LogEngine
+        HW --> LogEngine
+        
+        LogEngine --> CLI["SerialCLI & UART<br/>(115200 baud)"]
+    end
+
+    subgraph PC["Desktop Station (Python GUI)"]
+        direction TB
+        CLI --> Transport["SerialTransport /<br/>SimulatedTransport"]
+        Transport --> Parser["ProtocolParser<br/>(XOR Checksum)"]
+        Parser --> UI["Live Dashboard &<br/>Antenna Lab Tab"]
+        Parser --> DB[("SQLite Database<br/>rflab_sessions.db")]
+        UI --> Export["CSV / JSON Export"]
+    end
+```
+
+---
 
 ## Features
 
-- **Wi-Fi Network Discovery**: Scan for networks and display signal strength, channel, and BSSID.
-- **Hardware Agnostic**: Firmware supports ESP32, ESP32-S2, ESP32-S3, ESP32-C3.
-- **Antenna A/B Benchmarking**: Structured workflow to compare two antennas by holding conditions identical and generating statistical reports.
-- **Real Physical RF & Network Metrics**:
-  - Direct RSSI statistics (Min, Max, Mean, Standard Deviation / Jitter)
-  - Active Wi-Fi Channel reporting
-  - Onboard internal chip temperature (°C)
-  - True ICMP Gateway Ping round-trip latency (ms) and Packet Loss rate (%)
-  - Link Health & Stability scoring
-- **Serial CLI**: Interact with the toolkit using clean, simple text commands over a serial monitor.
-- **High-End Desktop GUI**: A lightweight PySide6 application with real-time `pyqtgraph` charts, structured checksummed telemetry, SQLite session storage, CSV exporting, and an interactive **Antenna Lab** comparison interface.
+### 1. Genuine Physical RF & Network Metrics
+* **Direct RSSI Statistics**: Continuous sampling in dBm with Min, Max, Average, Variance, and Standard Deviation (Jitter) to filter out 2.4 GHz multipath reflections.
+* **True ICMP Ping Latency**: Native ESP-IDF `esp_ping` queries default gateway or custom hosts, providing actual RTT (min/avg/max in ms).
+* **Packet Loss Measurement**: Measures exact packet drop percentage ($0\%\text{ to }100\%$).
+* **Link Health & Stability Scoring**: `STABILITY` command evaluates RSSI jitter and latency stability to generate an overall Link Health score (0–100).
+* **Thermal Drift Correlation**: Reads on-chip junction temperature ($^\circ\text{C}$) in real time to monitor how transmitter heating impacts RF reception.
+* **Hardware Detection**: Automatically detects ESP32 chip family (ESP32, S2, S3, C3, C6), silicon revision, core count, and ESP-IDF SDK version.
+
+### 2. Antenna A/B Benchmarking Workflow
+* **Structured A/B Testing**: Run a 10-second benchmark on Antenna A, swap to Antenna B under identical positioning, and run Antenna B.
+* **Comparative Differential Matrix**: Calculates side-by-side differences ($\Delta\text{dBm}$):
+  * $\Delta\text{ Average RSSI}$: Identifies which antenna has higher gain.
+  * $\Delta\text{ Min / Max}$: Measures fade margin and signal floor.
+  * $\Delta\text{ StdDev / Jitter}$: Evaluates reception stability.
+* **Actionable Verdicts**: Automatically outputs which antenna is stronger and by how many dBm.
+
+### 3. Lightweight Desktop GUI (`desktop_gui`)
+* **Real-time Live Dashboard**: Hardware-accelerated PyQtGraph live RSSI chart with dynamic badges for RSSI, Channel, Latency, Loss, Temperature, and Moving Average.
+* **Interactive Antenna Lab Tab**: Dedicated control cards to run Antenna A and B tests, auto-generate comparative tables, and view analytical verdicts.
+* **Zero Heavy Dependencies**: Pure standard library math (no bloated NumPy required).
+* **Built-in Mock Simulator**: Test the entire application without hardware using the built-in `SIMULATOR` port (includes Gaussian RF noise and loss simulation).
+* **Persistent SQLite Storage**: Records every session to `rflab_sessions.db` with one-click CSV export.
+
+---
+
+## ESP32 Capabilities vs Lab Equipment
+
+| Metric / Parameter | ESP32 RF Lab | Lab Tool (VNA / Spectrum Analyzer) |
+|---|---|---|
+| **RSSI Signal Strength** | Physical readout ($\pm 2\text{ to }4\text{ dBm}$) | Calibrated ($\pm 0.1\text{ dBm}$) |
+| **Statistical Jitter / Noise** | Min, Max, Mean, StdDev | Full spectral noise floor |
+| **Latency & Packet Loss** | Real ICMP echo (1ms resolution) | Specialized network tester |
+| **Antenna A/B Comparison** | Valid relative gain & stability comparison | Measures absolute dBi |
+| **VSWR / Return Loss ($S_{11}$)** | Not supported (no RF bridge) | Supported (e.g. NanoVNA) |
+| **Frequency Range** | 2.4 GHz Wi-Fi channels (1–14) | Wideband (e.g. 50 kHz – 6 GHz) |
+| **Hardware Cost** | ~\$4 ESP32 development board | \$500 – \$20,000+ |
+
+---
 
 ## Setup & Installation
 
 ### 1. ESP32 Firmware
-1. Open the repository root in PlatformIO (VSCode).
-2. Build for your specific target (e.g., `pio run -e esp32dev`).
-3. Flash the board (`pio run -e esp32dev -t upload`).
+
+Prerequisites: [PlatformIO](https://platformio.org/) (CLI or VSCode extension).
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/Vivek-live-now/ESP32-RF-Lab.git
+   cd ESP32-RF-Lab
+   ```
+2. Build for your target board:
+   ```bash
+   # Standard ESP32
+   pio run -e esp32dev
+
+   # ESP32-S3
+   pio run -e esp32s3
+
+   # ESP32-C3
+   pio run -e esp32c3
+   ```
+3. Flash the board over USB:
+   ```bash
+   pio run -e esp32dev -t upload
+   ```
 
 ### 2. Desktop GUI
-The GUI requires Python 3.10+.
-1. Navigate to the GUI folder:
+
+Prerequisites: Python 3.10+.
+
+1. Navigate to the GUI directory:
    ```bash
    cd desktop_gui
    ```
-2. Install the requirements:
+2. Install dependencies:
    ```bash
    pip install -r requirements.txt
    ```
-3. Run the application:
+3. Launch the GUI:
    ```bash
    python main.py
    ```
-   *(Note: You can select "SIMULATOR" from the ports dropdown to test the GUI without an ESP32 connected!)*
+   *Tip: Select **"SIMULATOR"** from the Port dropdown to test the GUI without an ESP32 connected.*
 
-## CLI Usage (Firmware)
+---
 
-Connect to the ESP32 over Serial using a baud rate of `115200`. Use the following commands to control the tool manually:
+## Serial CLI Command Reference
 
-| Command | Description |
-|---|---|
-| `HELP` | Show the list of available commands. |
-| `INFO` | Display hardware info (model, revision, cores, SDK, and internal temperature). |
-| `SCAN` | Perform a Wi-Fi network scan and print results. |
-| `CONNECT <ssid> [pass]` | Connect to a specified Wi-Fi network. |
-| `DISCONNECT` | Disconnect from the current network. |
-| `STATUS` | Show connection status, IP, gateway, channel, RSSI, and temperature. |
-| `RSSI` | Show immediate RSSI value and active channel. |
-| `PING [ip/host]` | Send ICMP echo requests to gateway or custom host; reports latency and packet loss. |
-| `STABILITY [sec]` | Run RSSI jitter & gateway ping analysis; generates Link Health score (0-100). |
-| `ANTENNA A` | Run a 10-second RSSI benchmark for "Antenna A". |
-| `ANTENNA B` | Run a 10-second RSSI benchmark for "Antenna B". |
-| `COMPARE` | Compare the results of the Antenna A and Antenna B benchmarks. |
-| `STREAM START [rate]` | Starts structured framed telemetry protocol for GUI (rate in Hz: 1, 2, 5, 10, 20). |
-| `STREAM STOP` | Stops GUI telemetry streaming. |
-| `LOG START` | Begin logging data in CSV format. |
-| `LOG STOP` | Stop the background logger. |
-| `THROUGHPUT` | Show 802.11n PHY speed capabilities and link limits. |
+Connect to the ESP32 serial monitor at **115200 baud**.
+
+| Command | Arguments | Description |
+|---|---|---|
+| `HELP` | — | Display the list of available commands. |
+| `INFO` | — | Show chip model, silicon revision, core count, SDK, and internal temperature. |
+| `SCAN` | — | Scan 2.4 GHz channels and print SSIDs, BSSIDs, RSSI, and encryption types. |
+| `CONNECT` | `<ssid> [pass]` | Connect to a Wi-Fi Access Point. |
+| `DISCONNECT` | — | Disconnect from the current network. |
+| `STATUS` | — | Show connection state, local IP, gateway, channel, RSSI, and temperature. |
+| `RSSI` | — | Read current RSSI in dBm and active Wi-Fi channel. |
+| `PING` | `[ip/host]` | Send ICMP probes to gateway (default) or host; prints min/avg/max RTT and packet loss. |
+| `STABILITY` | `[seconds]` | Measure RSSI jitter and gateway ping; generates a Link Health score (0–100). |
+| `ANTENNA A` | — | Run a 10-second benchmark for Antenna A (prints stats and GUI telemetry). |
+| `ANTENNA B` | — | Run a 10-second benchmark for Antenna B (prints stats and GUI telemetry). |
+| `COMPARE` | — | Print side-by-side comparison table with $\Delta$ differentials. |
+| `STREAM START`| `[rate]` | Start structured framed telemetry streaming for GUI (1, 2, 5, 10, or 20 Hz). |
+| `STREAM STOP` | — | Stop structured GUI telemetry streaming. |
+| `LOG START` | — | Start logging data in CSV format to serial. |
+| `LOG STOP` | — | Stop CSV logging. |
+| `THROUGHPUT` | — | Display 802.11n PHY speed limits and expected TCP transfer rates. |
+
+---
 
 ## Antenna Testing Methodology
 
-When performing an A/B test between two antennas:
-1. Ensure the ESP32 is placed in the exact same location and orientation for both tests.
-2. Connect to a stable Wi-Fi network using the `CONNECT` command.
-3. Attach the first antenna. Run `ANTENNA A`. Wait for the test to complete.
-4. Carefully power down (if necessary), attach the second antenna, power up, connect, and ensure it is placed exactly as before. Run `ANTENNA B`.
-5. Run `COMPARE` to view the statistical differences in signal quality, or stream the data directly to the **Desktop GUI** for persistent storage and graphing.
+To perform an accurate, repeatable A/B benchmark between two antennas:
 
-**Note**: Do not rely on instantaneous RSSI for conclusions. Evaluate the average, minimum, and variance over the measurement duration.
+1. **Fix Orientation & Position**: Place the ESP32 in an identical spot and orientation for both tests. 2.4 GHz waves are sensitive to multipath reflection from nearby objects and bodies.
+2. **Establish Connection**: Connect to your Access Point using `CONNECT <ssid> [pass]`.
+3. **Benchmark Antenna A**: Attach the baseline antenna. Run `ANTENNA A` (or click the button in the Desktop GUI). Wait 10 seconds for the test to complete.
+4. **Benchmark Antenna B**: Carefully swap to the candidate antenna without moving the board's position. Run `ANTENNA B`.
+5. **Analyze Results**: Run `COMPARE` in the CLI or view the auto-populated comparison matrix and verdict in the Desktop GUI.
+
+---
+
+## Running Automated Tests
+
+### 1. Firmware Unit Tests (PlatformIO)
+* **Hardware-Free (Native Desktop Host)**:
+  ```bash
+  pio test -e native
+  ```
+* **On Connected ESP32 Microcontroller**:
+  ```bash
+  pio test -e esp32dev
+  ```
+
+### 2. Desktop GUI Unit Tests (Python)
+* Run via `pytest`:
+  ```bash
+  pytest desktop_gui/tests -v
+  ```
+* Or run standalone:
+  ```bash
+  python desktop_gui/tests/test_all.py
+  ```
+
+---
+
+## Continuous Integration (CI)
+
+Every commit pushed to `main` triggers automated verification via [GitHub Actions](.github/workflows/ci.yml):
+* **Desktop GUI Test Matrix**: Tests across Python 3.10, 3.11, and 3.12.
+* **PlatformIO Multi-Target Build**: Compiles firmware for `esp32dev` and `esp32s3`.
+* **PlatformIO Native Unity Tests**: Executes C++ unit tests in the native runner.
+
+---
+
+## License
+
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
