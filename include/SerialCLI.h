@@ -5,6 +5,7 @@
 #include "MeasurementEngine.h"
 #include "LoggingEngine.h"
 #include "AntennaBenchmarkEngine.h"
+#include "PingEngine.h"
 
 class SerialCLI {
 private:
@@ -13,6 +14,7 @@ private:
     MeasurementEngine* meas;
     LoggingEngine* log;
     AntennaBenchmarkEngine* bench;
+    PingEngine* ping;
 
     String commandBuffer;
 
@@ -23,9 +25,11 @@ private:
     void printHelp() const;
     void handleConnect(const String& cmd);
     void handleStream(const String& cmd);
+    void handlePing(const String& cmd);
+    void handleStability(const String& cmd);
 
 public:
-    SerialCLI(HardwareAbstraction* h, WiFiEngine* w, MeasurementEngine* m, LoggingEngine* l, AntennaBenchmarkEngine* b);
+    SerialCLI(HardwareAbstraction* h, WiFiEngine* w, MeasurementEngine* m, LoggingEngine* l, AntennaBenchmarkEngine* b, PingEngine* p = nullptr);
 
     // Poll for serial input
     void update();

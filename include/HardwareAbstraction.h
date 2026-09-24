@@ -17,6 +17,10 @@ public:
     // Get SDK/Core version
     String getSdkVersion() const;
 
+    // Get internal chip temperature in Celsius
+    float getTemperatureC() const;
+
     // Print hardware info to Serial
     void printHardwareInfo() const;
 };
+

@@ -7,9 +7,11 @@ class MockWiFiEngine : public WiFiEngine {
 public:
     bool connected = true;
     int32_t mockRssi = -50;
+    int32_t mockChannel = 6;
 
-    bool isConnected() const { return connected; }
-    int32_t getCurrentRSSI() const { return mockRssi; }
+    bool isConnected() const override { return connected; }
+    int32_t getCurrentRSSI() const override { return mockRssi; }
+    int32_t getCurrentChannel() const override { return mockChannel; }
 };
 
 MockWiFiEngine mockWifi;

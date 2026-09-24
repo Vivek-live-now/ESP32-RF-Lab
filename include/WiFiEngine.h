@@ -14,25 +14,36 @@ struct WiFiNetwork {
 class WiFiEngine {
 public:
     WiFiEngine();
+    virtual ~WiFiEngine() = default;
 
     // Initialize Wi-Fi in Station mode
-    void begin();
+    virtual void begin();
 
     // Connect to an AP
-    bool connect(const char* ssid, const char* password, uint32_t timeoutMs = 10000);
+    virtual bool connect(const char* ssid, const char* password, uint32_t timeoutMs = 10000);
 
     // Disconnect from AP
-    void disconnect();
+    virtual void disconnect();
 
     // Check if connected
-    bool isConnected() const;
+    virtual bool isConnected() const;
 
     // Get current RSSI if connected
-    int32_t getCurrentRSSI() const;
+    virtual int32_t getCurrentRSSI() const;
+
+    // Get current Wi-Fi channel
+    virtual int32_t getCurrentChannel() const;
+
+    // Get default Gateway IP
+    virtual IPAddress getGatewayIP() const;
+
+    // Get local IP
+    virtual IPAddress getLocalIP() const;
 
     // Perform a Wi-Fi scan and return results
-    std::vector<WiFiNetwork> scanNetworks();
+    virtual std::vector<WiFiNetwork> scanNetworks();
 
     // Print scan results to Serial
-    void printScanResults(const std::vector<WiFiNetwork>& networks) const;
+    virtual void printScanResults(const std::vector<WiFiNetwork>& networks) const;
 };
+

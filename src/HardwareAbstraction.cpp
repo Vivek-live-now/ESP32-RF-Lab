@@ -39,6 +39,14 @@ String HardwareAbstraction::getSdkVersion() const {
     return String(ESP.getSdkVersion());
 }
 
+float HardwareAbstraction::getTemperatureC() const {
+#if defined(ESP32)
+    return temperatureRead();
+#else
+    return 0.0f;
+#endif
+}
+
 void HardwareAbstraction::printHardwareInfo() const {
     Serial.println("=== Hardware Information ===");
     Serial.print("Model: ");
@@ -49,5 +57,9 @@ void HardwareAbstraction::printHardwareInfo() const {
     Serial.println(getCpuCores());
     Serial.print("SDK Version: ");
     Serial.println(getSdkVersion());
+    Serial.print("Internal Temp: ");
+    Serial.print(getTemperatureC(), 1);
+    Serial.println(" °C");
     Serial.println("============================");
 }
+

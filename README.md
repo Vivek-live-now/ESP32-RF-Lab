@@ -10,8 +10,14 @@ The ESP32 firmware handles the raw RF data collection, while the robust desktop 
 - **Wi-Fi Network Discovery**: Scan for networks and display signal strength, channel, and BSSID.
 - **Hardware Agnostic**: Firmware supports ESP32, ESP32-S2, ESP32-S3, ESP32-C3.
 - **Antenna A/B Benchmarking**: Structured workflow to compare two antennas by holding conditions identical and generating statistical reports.
+- **Real Physical RF & Network Metrics**:
+  - Direct RSSI statistics (Min, Max, Mean, Standard Deviation / Jitter)
+  - Active Wi-Fi Channel reporting
+  - Onboard internal chip temperature (°C)
+  - True ICMP Gateway Ping round-trip latency (ms) and Packet Loss rate (%)
+  - Link Health & Stability scoring
 - **Serial CLI**: Interact with the toolkit using clean, simple text commands over a serial monitor.
-- **High-End Desktop GUI**: A robust PySide6 application with real-time `pyqtgraph` charts, structured JSON/Checksummed telemetry, SQLite session storage, and CSV/JSON exporting.
+- **High-End Desktop GUI**: A lightweight PySide6 application with real-time `pyqtgraph` charts, structured checksummed telemetry, SQLite session storage, CSV exporting, and an interactive **Antenna Lab** comparison interface.
 
 ## Setup & Installation
 
@@ -43,19 +49,22 @@ Connect to the ESP32 over Serial using a baud rate of `115200`. Use the followin
 | Command | Description |
 |---|---|
 | `HELP` | Show the list of available commands. |
-| `INFO` | Display hardware information (model, revision, cores, SDK). |
+| `INFO` | Display hardware info (model, revision, cores, SDK, and internal temperature). |
 | `SCAN` | Perform a Wi-Fi network scan and print results. |
 | `CONNECT <ssid> [pass]` | Connect to a specified Wi-Fi network. |
 | `DISCONNECT` | Disconnect from the current network. |
-| `STATUS` | Show current connection status and IP address. |
-| `RSSI` | Show the immediate RSSI value (requires connection). |
+| `STATUS` | Show connection status, IP, gateway, channel, RSSI, and temperature. |
+| `RSSI` | Show immediate RSSI value and active channel. |
+| `PING [ip/host]` | Send ICMP echo requests to gateway or custom host; reports latency and packet loss. |
+| `STABILITY [sec]` | Run RSSI jitter & gateway ping analysis; generates Link Health score (0-100). |
 | `ANTENNA A` | Run a 10-second RSSI benchmark for "Antenna A". |
 | `ANTENNA B` | Run a 10-second RSSI benchmark for "Antenna B". |
 | `COMPARE` | Compare the results of the Antenna A and Antenna B benchmarks. |
-| `LOG START` | Begin logging RSSI data every second in CSV format. |
+| `STREAM START [rate]` | Starts structured framed telemetry protocol for GUI (rate in Hz: 1, 2, 5, 10, 20). |
+| `STREAM STOP` | Stops GUI telemetry streaming. |
+| `LOG START` | Begin logging data in CSV format. |
 | `LOG STOP` | Stop the background logger. |
-| `STREAM START [rate]` | Starts the structured framed telemetry protocol for the GUI (rate in Hz: 1, 2, 5, 10). |
-| `STREAM STOP` | Stops the structured GUI telemetry. |
+| `THROUGHPUT` | Show 802.11n PHY speed capabilities and link limits. |
 
 ## Antenna Testing Methodology
 

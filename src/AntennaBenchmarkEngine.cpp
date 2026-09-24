@@ -19,6 +19,12 @@ void AntennaBenchmarkEngine::testAntennaA(uint32_t durationMs) {
 
     Serial.println("Antenna A testing complete.");
     measurementEngine->printStats();
+    Serial.printf("ANTENNA_RES,A,%zu,%ld,%ld,%.2f,%.2f\n",
+        antennaAResult.stats.samples,
+        static_cast<long>(antennaAResult.stats.min),
+        static_cast<long>(antennaAResult.stats.max),
+        antennaAResult.stats.average,
+        antennaAResult.stats.stddev);
 }
 
 void AntennaBenchmarkEngine::testAntennaB(uint32_t durationMs) {
@@ -35,6 +41,12 @@ void AntennaBenchmarkEngine::testAntennaB(uint32_t durationMs) {
 
     Serial.println("Antenna B testing complete.");
     measurementEngine->printStats();
+    Serial.printf("ANTENNA_RES,B,%zu,%ld,%ld,%.2f,%.2f\n",
+        antennaBResult.stats.samples,
+        static_cast<long>(antennaBResult.stats.min),
+        static_cast<long>(antennaBResult.stats.max),
+        antennaBResult.stats.average,
+        antennaBResult.stats.stddev);
 }
 
 void AntennaBenchmarkEngine::compare() const {

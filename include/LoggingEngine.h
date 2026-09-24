@@ -25,7 +25,8 @@ public:
     LogFormat getFormat() const;
 
     // Log a data point
-    void logDataPoint(uint32_t timestamp, int32_t rssi, int32_t channel, float latencyMs, float packetLoss, float throughputMbps);
+    void logDataPoint(uint32_t timestamp, int32_t rssi, int32_t channel, float latencyMs, float packetLoss, float throughputMbps = 0.0f, float tempC = 0.0f);
+
 
     // Print CSV header
     void printHeader();

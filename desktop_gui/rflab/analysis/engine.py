@@ -1,4 +1,4 @@
-import numpy as np
+import math
 
 class AnalysisEngine:
     def __init__(self, window_size=100):
@@ -43,10 +43,11 @@ class AnalysisEngine:
         else:
             moving_avg = 0.0
 
-        # Calculate stddev of the moving window to keep it fast
+        # Calculate stddev of the moving window
         if len(self.rssi_buffer) > 1:
-            arr = np.array(self.rssi_buffer)
-            stddev = np.std(arr)
+            mean = sum(self.rssi_buffer) / len(self.rssi_buffer)
+            variance = sum((x - mean) ** 2 for x in self.rssi_buffer) / len(self.rssi_buffer)
+            stddev = math.sqrt(variance)
         else:
             stddev = 0.0
 
@@ -61,17 +62,30 @@ class AnalysisEngine:
     @staticmethod
     def compare_sessions(data_a: list, data_b: list) -> dict:
         """
-        Expects list of tuples/lists: [(ts, rssi, ch, lat, loss), ...]
+        Expects list of tuples/lists: [(ts, rssi, ch, lat, loss, [temp]), ...]
         """
         def calc_for(data):
-            if not data: return {"avg": 0, "min": 0, "max": 0, "loss": 0}
+            if not data:
+                return {
+                    "count": 0, "avg": 0.0, "min": 0, "max": 0,
+                    "stddev": 0.0, "latency": 0.0, "loss": 0.0
+                }
             rssis = [r[1] for r in data]
-            losses = [r[4] for r in data]
+            latencies = [r[3] for r in data if len(r) > 3]
+            losses = [r[4] for r in data if len(r) > 4]
+
+            avg_rssi = sum(rssis) / len(rssis)
+            var_rssi = sum((x - avg_rssi) ** 2 for x in rssis) / len(rssis) if len(rssis) > 1 else 0.0
+            stddev_rssi = math.sqrt(var_rssi)
+
             return {
-                "avg": sum(rssis) / len(rssis),
+                "count": len(rssis),
+                "avg": round(avg_rssi, 2),
                 "min": min(rssis),
                 "max": max(rssis),
-                "loss": sum(losses) / len(losses)
+                "stddev": round(stddev_rssi, 2),
+                "latency": round(sum(latencies) / len(latencies), 2) if latencies else 0.0,
+                "loss": round(sum(losses) / len(losses), 2) if losses else 0.0
             }
 
         res_a = calc_for(data_a)
@@ -80,5 +94,8 @@ class AnalysisEngine:
         return {
             "A": res_a,
             "B": res_b,
-            "Diff_Avg": res_b["avg"] - res_a["avg"]
+            "Diff_Avg": round(res_b["avg"] - res_a["avg"], 2),
+            "Diff_Min": res_b["min"] - res_a["min"],
+            "Diff_Max": res_b["max"] - res_a["max"],
+            "Diff_Loss": round(res_b["loss"] - res_a["loss"], 2)
         }

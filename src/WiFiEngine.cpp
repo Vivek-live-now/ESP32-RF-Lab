@@ -48,6 +48,27 @@ int32_t WiFiEngine::getCurrentRSSI() const {
     return 0;
 }
 
+int32_t WiFiEngine::getCurrentChannel() const {
+    if (isConnected()) {
+        return WiFi.channel();
+    }
+    return 0;
+}
+
+IPAddress WiFiEngine::getGatewayIP() const {
+    if (isConnected()) {
+        return WiFi.gatewayIP();
+    }
+    return IPAddress(0, 0, 0, 0);
+}
+
+IPAddress WiFiEngine::getLocalIP() const {
+    if (isConnected()) {
+        return WiFi.localIP();
+    }
+    return IPAddress(0, 0, 0, 0);
+}
+
 std::vector<WiFiNetwork> WiFiEngine::scanNetworks() {
     std::vector<WiFiNetwork> networks;
     Serial.println("Starting network scan...");

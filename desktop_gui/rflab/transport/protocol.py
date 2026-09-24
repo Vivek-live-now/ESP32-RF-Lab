@@ -38,11 +38,11 @@ class ProtocolParser:
                 return {"type": "error", "msg": "Checksum failed", "raw": line}
 
             parts = line.split(',')
-            if len(parts) != 8:
+            if len(parts) not in (8, 9):
                 return {"type": "error", "msg": "Malformed telemetry", "raw": line}
 
             try:
-                return {
+                data = {
                     "type": "telemetry",
                     "seq": int(parts[1]),
                     "timestamp_ms": int(parts[2]),
@@ -51,8 +51,44 @@ class ProtocolParser:
                     "latency": float(parts[5]),
                     "loss": float(parts[6])
                 }
+                if len(parts) == 9:
+                    data["temp"] = float(parts[7])
+                return data
             except ValueError:
                 return {"type": "error", "msg": "Data type parsing failed", "raw": line}
+
+        # Benchmark results: ANTENNA_RES,<antenna>,<samples>,<min>,<max>,<avg>,<stddev>
+        if line.startswith("ANTENNA_RES,"):
+            parts = line.split(',')
+            if len(parts) >= 7:
+                try:
+                    return {
+                        "type": "antenna_result",
+                        "antenna": parts[1],
+                        "samples": int(parts[2]),
+                        "min": int(parts[3]),
+                        "max": int(parts[4]),
+                        "avg": float(parts[5]),
+                        "stddev": float(parts[6])
+                    }
+                except ValueError:
+                    pass
+
+        # Ping response: PING_RES,<ip>,<sent>,<recv>,<loss_pct>,<avg_latency>
+        if line.startswith("PING_RES,"):
+            parts = line.split(',')
+            if len(parts) >= 6:
+                try:
+                    return {
+                        "type": "ping_result",
+                        "target": parts[1],
+                        "sent": int(parts[2]),
+                        "recv": int(parts[3]),
+                        "loss": float(parts[4]),
+                        "latency": float(parts[5])
+                    }
+                except ValueError:
+                    pass
 
         # Command ACKs
         if line.startswith("ACK_"):
