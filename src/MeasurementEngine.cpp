@@ -53,15 +53,29 @@ RssiStats MeasurementEngine::getRssiStats() const {
 
 void MeasurementEngine::printStats() const {
     RssiStats stats = getRssiStats();
+#if defined(ARDUINO)
     Serial.println("=== RSSI Statistics ===");
     Serial.printf("Samples: %zu\n", stats.samples);
     if (stats.samples > 0) {
-        Serial.printf("Min:     %d dBm\n", stats.min);
-        Serial.printf("Max:     %d dBm\n", stats.max);
+        Serial.printf("Min:     %ld dBm\n", static_cast<long>(stats.min));
+        Serial.printf("Max:     %ld dBm\n", static_cast<long>(stats.max));
         Serial.printf("Average: %.2f dBm\n", stats.average);
         Serial.printf("StdDev:  %.2f\n", stats.stddev);
     } else {
         Serial.println("No samples collected.");
     }
     Serial.println("=======================");
+#else
+    printf("=== RSSI Statistics ===\n");
+    printf("Samples: %zu\n", stats.samples);
+    if (stats.samples > 0) {
+        printf("Min:     %ld dBm\n", static_cast<long>(stats.min));
+        printf("Max:     %ld dBm\n", static_cast<long>(stats.max));
+        printf("Average: %.2f dBm\n", stats.average);
+        printf("StdDev:  %.2f\n", stats.stddev);
+    } else {
+        printf("No samples collected.\n");
+    }
+    printf("=======================\n");
+#endif
 }

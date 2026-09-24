@@ -1,5 +1,21 @@
 #pragma once
+
+#if defined(ARDUINO)
 #include <Arduino.h>
+#else
+#include <cstdint>
+#include <cstddef>
+#include <chrono>
+#include <thread>
+inline uint32_t millis() {
+    using namespace std::chrono;
+    static auto start = steady_clock::now();
+    return static_cast<uint32_t>(duration_cast<milliseconds>(steady_clock::now() - start).count());
+}
+inline void delay(uint32_t ms) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(ms));
+}
+#endif
 #include <vector>
 #include <numeric>
 #include <cmath>

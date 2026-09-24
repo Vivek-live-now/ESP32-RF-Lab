@@ -59,6 +59,7 @@ void test_rssi_stats_multiple(void) {
     TEST_ASSERT_FLOAT_WITHIN(0.1, 8.16, stats.stddev);
 }
 
+#if defined(ARDUINO)
 void setup() {
     delay(2000);
     UNITY_BEGIN();
@@ -70,3 +71,13 @@ void setup() {
 
 void loop() {
 }
+#else
+int main(int argc, char **argv) {
+    UNITY_BEGIN();
+    RUN_TEST(test_rssi_stats_empty);
+    RUN_TEST(test_rssi_stats_single);
+    RUN_TEST(test_rssi_stats_multiple);
+    return UNITY_END();
+}
+#endif
+
